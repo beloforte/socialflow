@@ -524,8 +524,8 @@ Começar Agora — É Grátis →
 // SUPABASE CONFIG
 // ⬇️ SUBSTITUA PELOS SEUS DADOS ⬇️
 // ══════════════════════════════════════
-const SB_URL = 'https://SEU-PROJETO.supabase.co';
-const SB_KEY = 'SUA_ANON_KEY_AQUI';
+const SB_URL = 'https://ujqctxnazysowhtvcqhu.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqcWN0eG5henlzb3dodHZjcWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0MTA2ODIsImV4cCI6MjEwNjk4NjY4Mn0.eWJHX_XMzuIlay1BKz43m9pjZXNPO5s5Ybaaf8EMwaY';
 const sb = (window.supabase?.createClient && !SB_URL.includes('SEU-PROJETO'))
   ? window.supabase.createClient(SB_URL, SB_KEY) : null;
 const isDemo = !sb || SB_URL.includes('SEU-PROJETO');
