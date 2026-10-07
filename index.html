@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>SocialFlow — Gestão Inteligente de Redes Sociais</title>
+<meta name="description" content="Agende, crie e analise conteúdo com IA para todas as suas redes sociais.">
+<meta name="theme-color" content="#0f172a">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%236366f1'/%3E%3Cstop offset='100%25' stop-color='%23a855f7'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='44' font-size='32' text-anchor='middle' fill='white'%3E⚡%3C/text%3E%3C/svg%3E">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script>
+tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']},animation:{'fadeUp':'fadeUp .5s ease-out both','fadeIn':'fadeIn .4s ease-out both','float':'float 6s ease-in-out infinite','pulse-slow':'pulse 3s ease-in-out infinite'},keyframes:{fadeUp:{'0%':{opacity:'0',transform:'translateY(20px)'},'100%':{opacity:'1',transform:'translateY(0)'}},fadeIn:{'0%':{opacity:'0'},'100%':{opacity:'1'}},float:{'0%,100%':{transform:'translateY(0)'},'50%':{transform:'translateY(-15px)'}}}}}}
+</script>
+<style>
+*{-webkit-font-smoothing:antialiased;box-sizing:border-box}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#0f172a}::-webkit-scrollbar-thumb{background:#6366f1;border-radius:4px}
+.g-t{background:linear-gradient(135deg,#818cf8,#c084fc,#f472b6);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:gs 5s ease infinite}
+@keyframes gs{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.gl{background:rgba(255,255,255,.04);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.07)}
+.gl:hover{background:rgba(255,255,255,.07);border-color:rgba(99,102,241,.25)}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:.2;pointer-events:none}
+.btn{background:linear-gradient(135deg,#6366f1,#8b5cf6);transition:all .25s}
+.btn:hover{background:linear-gradient(135deg,#818cf8,#a78bfa);transform:translateY(-1px);box-shadow:0 8px 25px rgba(99,102,241,.35)}
+.slink{display:flex;align-items:center;gap:.75rem;padding:.625rem 1rem;border-radius:.75rem;cursor:pointer;font-weight:500;transition:all .2s;font-size:.875rem}
+.slink:hover{background:rgba(99,102,241,.12);color:#a5b4fc}
+.slink.on{background:rgba(99,102,241,.2);color:#818cf8}
+.nav-p{position:relative;padding:.5rem 1.25rem;border-radius:.75rem;font-weight:500;cursor:pointer;transition:all .2s;font-size:.875rem}
+.nav-p:hover{color:#c4b5fd;background:rgba(99,102,241,.1)}
+.nav-p.on{color:#fff;background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.3)}
+.pbadge{display:inline-flex;align-items:center;gap:.25rem;padding:.25rem .625rem;border-radius:999px;font-size:.72rem;font-weight:500}
+.toast{animation:tIn .35s ease-out forwards}
+@keyframes tIn{from{opacity:0;transform:translateX(50px)}to{opacity:1;transform:translateX(0)}}
+.mov{animation:mIn .3s ease-out}
+@keyframes mIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.cal-d{transition:all .15s;border-radius:.5rem;cursor:pointer;min-height:72px;padding:4px}
+.cal-d:hover{background:rgba(99,102,241,.12);transform:scale(1.03)}
+.dot{width:5px;height:5px;border-radius:50%}
+.stat{transition:all .25s}.stat:hover{transform:translateY(-3px);box-shadow:0 15px 35px rgba(0,0,0,.25)}
+input,textarea,select{outline:none}
+input:focus,textarea:focus,select:focus{border-color:#6366f1!important;box-shadow:0 0 0 2px rgba(99,102,241,.2)}
+.quick{display:none}
+@media(max-width:1023px){.quick{display:flex}}
+</style>
+</head>
+<body class="bg-[#0a0e1a] text-slate-200 font-sans">
+
+<!-- TOASTS -->
+<div id="toasts" class="fixed top-3 right-3 z-[110] flex flex-col gap-2 max-w-xs"></div>
+
+<!-- ══════════════ LANDING ══════════════ -->
+<div id="landing">
+
+<nav class="fixed top-0 w-full z-50 gl" style="border-bottom:1px solid rgba(255,255,255,.05)">
+<div class="max-w-6xl mx-auto px-4 flex items-center justify-between h-14 sm:h-16">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm sm:text-base">⚡</div>
+<span class="text-lg sm:text-xl font-bold g-t">SocialFlow</span>
+</div>
+<div class="hidden md:flex gap-1">
+<a href="#recursos" class="nav-p text-slate-300">Recursos</a>
+<a href="#precos" class="nav-p text-slate-300">Preços</a>
+<a href="#sobre" class="nav-p text-slate-300">Sobre</a>
+</div>
+<div class="flex items-center gap-2">
+<button onclick="showAuth('login')" class="px-3 sm:px-4 py-2 text-sm text-slate-300 hover:text-white transition-colors">Entrar</button>
+<button onclick="showAuth('register')" class="btn px-4 sm:px-5 py-2 rounded-xl text-sm font-semibold text-white">Começar Grátis</button>
+</div>
+</div>
+</nav>
+
+<!-- HERO -->
+<section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-14">
+<div class="orb w-[500px] h-[500px] bg-indigo-600 -top-32 -left-32"></div>
+<div class="orb w-[400px] h-[400px] bg-purple-600 -bottom-20 -right-20"></div>
+<div class="orb w-[250px] h-[250px] bg-pink-600 top-1/3 right-1/4"></div>
+<div class="relative z-10 max-w-3xl mx-auto px-4 text-center">
+<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full gl text-xs font-medium text-indigo-300 mb-6 animate-fadeUp">
+<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse-slow"></span>
+Propulsado por Inteligência Artificial
+</div>
+<h1 class="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight animate-fadeUp" style="animation-delay:.1s">
+Gerencie todas as<br>
+<span class="g-t">redes sociais</span><br>
+em um só lugar
+</h1>
+<p class="mt-5 text-base sm:text-lg text-slate-400 max-w-xl mx-auto leading-relaxed animate-fadeUp" style="animation-delay:.2s">
+Agende posts, gere legendas com IA, acompanhe métricas e colabore com sua equipe — de forma simples e poderosa.
+</p>
+<div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 animate-fadeUp" style="animation-delay:.3s">
+<button onclick="showAuth('register')" class="btn px-7 py-3.5 rounded-2xl text-base font-semibold text-white shadow-xl shadow-indigo-500/20">
+Começar Gratuitamente →
+</button>
+<a href="#recursos" class="px-7 py-3.5 rounded-2xl text-base font-semibold text-slate-300 gl hover:bg-white/[.06] transition-all">
+Conhecer Recursos
+</a>
+</div>
+<div class="mt-12 grid grid-cols-3 gap-6 max-w-sm mx-auto animate-fadeUp" style="animation-delay:.4s">
+<div><div class="text-2xl font-black g-t">12K+</div><div class="text-xs text-slate-500 mt-1">Usuários</div></div>
+<div><div class="text-2xl font-black g-t">2.5M</div><div class="text-xs text-slate-500 mt-1">Posts</div></div>
+<div><div class="text-2xl font-black g-t">98%</div><div class="text-xs text-slate-500 mt-1">Satisfação</div></div>
+</div>
+</div>
+</section>
+
+<!-- RECURSOS -->
+<section id="recursos" class="py-20 px-4 relative">
+<div class="orb w-[350px] h-[350px] bg-indigo-600 top-10 right-0"></div>
+<div class="max-w-5xl mx-auto">
+<div class="text-center mb-12">
+<div class="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2">Recursos</div>
+<h2 class="text-3xl sm:text-4xl font-bold">Tudo para <span class="g-t">crescer nas redes</span></h2>
+<p class="mt-3 text-slate-400 max-w-lg mx-auto text-sm sm:text-base">Ferramentas inteligentes para automatizar sua presença digital.</p>
+</div>
+<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+<div class="gl rounded-2xl p-5 transition-all"><div class="w-11 h-11 rounded-xl bg-indigo-500/20 flex items-center justify-center text-xl mb-3">🤖</div><h3 class="font-semibold mb-1.5">IA para Conteúdo</h3><p class="text-slate-400 text-sm">Legendas, hashtags e ideias geradas automaticamente com IA avançada.</p></div>
+<div class="gl rounded-2xl p-5 transition-all"><div class="w-11 h-11 rounded-xl bg-purple-500/20 flex items-center justify-center text-xl mb-3">📅</div><h3 class="font-semibold mb-1.5">Calendário Visual</h3><p class="text-slate-400 text-sm">Organize seu conteúdo no calendário com agendamento inteligente.</p></div>
+<div class="gl rounded-2xl p-5 transition-all"><div class="w-11 h-11 rounded-xl bg-pink-500/20 flex items-center justify-center text-xl mb-3">📊</div><h3 class="font-semibold mb-1.5">Analytics Completo</h3><p class="text-slate-400 text-sm">Métricas de engajamento, alcance e crescimento por rede social.</p></div>
+<div class="gl rounded-2xl p-5 transition-all"><div class="w-11 h-11 rounded-xl bg-cyan-500/20 flex items-center justify-center text-xl mb-3">📱</div><h3 class="font-semibold mb-1.5">Multi-Plataforma</h3><p class="text-slate-400 text-sm">Instagram, Facebook, LinkedIn, X, TikTok, YouTube e Pinterest.</p></div>
+<div class="gl rounded-2xl p-5 transition-all"><div class="w-11 h-11 rounded-xl bg-emerald-500/20 flex items-center justify-center text-xl mb-3">⚡</div><h3 class="font-semibold mb-1.5">Publicação Automática</h3><p class="text-slate-400 text-sm">Posts publicam automaticamente no horário agendado.</p></div>
+<div class="gl rounded-2xl p-5 transition-all"><div class="w-11 h-11 rounded-xl bg-orange-500/20 flex items-center justify-center text-xl mb-3">🎨</div><h3 class="font-semibold mb-1.5">Biblioteca de Mídia</h3><p class="text-slate-400 text-sm">Organize imagens e vídeos com busca inteligente e tags.</p></div>
+</div>
+</div>
+</section>
+
+<!-- COMO FUNCIONA -->
+<section class="py-20 px-4">
+<div class="max-w-4xl mx-auto">
+<div class="text-center mb-12">
+<div class="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-2">Como Funciona</div>
+<h2 class="text-3xl sm:text-4xl font-bold">Simples <span class="g-t">como 1-2-3</span></h2>
+</div>
+<div class="grid md:grid-cols-3 gap-6">
+<div class="text-center"><div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl font-black text-white mx-auto mb-3">1</div><h3 class="font-semibold mb-1.5">Conecte contas</h3><p class="text-slate-400 text-sm">Adicione suas redes sociais com segurança.</p></div>
+<div class="text-center"><div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-xl font-black text-white mx-auto mb-3">2</div><h3 class="font-semibold mb-1.5">Crie e agende</h3><p class="text-slate-400 text-sm">Use IA para criar conteúdo e escolha o melhor horário.</p></div>
+<div class="text-center"><div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-orange-600 flex items-center justify-center text-xl font-black text-white mx-auto mb-3">3</div><h3 class="font-semibold mb-1.5">Analise resultados</h3><p class="text-slate-400 text-sm">Acompanhe métricas e refine sua estratégia.</p></div>
+</div>
+</div>
+</section>
+
+<!-- PREÇOS -->
+<section id="precos" class="py-20 px-4">
+<div class="max-w-5xl mx-auto">
+<div class="text-center mb-12">
+<div class="text-xs font-semibold text-pink-400 uppercase tracking-wider mb-2">Preços</div>
+<h2 class="text-3xl sm:text-4xl font-bold">Planos para <span class="g-t">todos os tamanhos</span></h2>
+<p class="mt-3 text-slate-400">Comece grátis e evolua quando precisar.</p>
+</div>
+<div class="grid md:grid-cols-3 gap-5 items-start">
+
+<div class="gl rounded-3xl p-6 sm:p-7">
+<div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Gratuito</div>
+<div class="mt-3 flex items-baseline gap-1"><span class="text-4xl font-black">R$ 0</span><span class="text-slate-500 text-sm">/mês</span></div>
+<p class="mt-1 text-slate-400 text-sm">Para começar sua jornada.</p>
+<ul class="mt-5 space-y-2.5 text-sm text-slate-300">
+<li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> 3 contas sociais</li>
+<li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> 10 posts/mês</li>
+<li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Analytics básico</li>
+<li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> 5 legendas IA/mês</li>
+</ul>
+<button onclick="showAuth('register')" class="mt-6 w-full py-2.5 rounded-xl gl hover:bg-white/[.08] font-semibold text-slate-200 transition-all">Começar Grátis</button>
+</div>
+
+<div class="rounded-3xl p-6 sm:p-7 relative" style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.3)">
+<div class="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-[10px] font-bold text-white">MAIS POPULAR</div>
+<div class="text-xs font-semibold text-indigo-300 uppercase tracking-wider">Pro</div>
+<div class="mt-3 flex items-baseline gap-1"><span class="text-4xl font-black text-white">R$ 19</span><span class="text-slate-400 text-sm">/mês</span></div>
+<p class="mt-1 text-slate-300 text-sm">Para creators e profissionais.</p>
+<ul class="mt-5 space-y-2.5 text-sm text-slate-200">
+<li class="flex items-center gap-2"><span class="text-indigo-400">✓</span> 15 contas sociais</li>
+<li class="flex items-center gap-2"><span class="text-indigo-400">✓</span> Posts ilimitados</li>
+<li class="flex items-center gap-2"><span class="text-indigo-400">✓</span> Analytics avançado</li>
+<li class="flex items-center gap-2"><span class="text-indigo-400">✓</span> IA ilimitada</li>
+<li class="flex items-center gap-2"><span class="text-indigo-400">✓</span> Relatórios PDF</li>
+</ul>
+<button onclick="showAuth('register')" class="btn mt-6 w-full py-2.5 rounded-xl font-semibold text-white">Assinar Pro</button>
+</div>
+
+<div class="gl rounded-3xl p-6 sm:p-7">
+<div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Enterprise</div>
+<div class="mt-3 flex items-baseline gap-1"><span class="text-4xl font-black">R$ 49</span><span class="text-slate-500 text-sm">/mês</span></div>
+<p class="mt-1 text-slate-400 text-sm">Para agências e grandes equipes.</p>
+<ul class="mt-5 space-y-2.5 text-sm text-slate-300">
+<li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Contas ilimitadas</li>
+<li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Tudo do Pro</li>
+<li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Multi-usuário</li>
+<li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> API access</li>
+<li class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Suporte VIP</li>
+</ul>
+<button onclick="showAuth('register')" class="mt-6 w-full py-2.5 rounded-xl gl hover:bg-white/[.08] font-semibold text-slate-200 transition-all">Falar com Vendas</button>
+</div>
+
+</div>
+</div>
+</section>
+
+<!-- CTA -->
+<section class="py-20 px-4 relative">
+<div class="orb w-[350px] h-[350px] bg-indigo-600 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+<div class="max-w-2xl mx-auto text-center relative z-10">
+<h2 class="text-3xl sm:text-4xl font-bold mb-4">Pronto para <span class="g-t">revolucionar</span> sua presença digital?</h2>
+<p class="text-slate-400 mb-6 text-sm sm:text-base">Junte-se a milhares de profissionais que usam o SocialFlow.</p>
+<button onclick="showAuth('register')" class="btn px-8 py-3.5 rounded-2xl text-base font-semibold text-white shadow-xl shadow-indigo-500/20">
+Começar Agora — É Grátis →
+</button>
+</div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t border-white/5 py-10 px-4">
+<div class="max-w-5xl mx-auto">
+<div class="grid sm:grid-cols-3 gap-8">
+<div>
+<div class="flex items-center gap-2 mb-3">
+<div class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">⚡</div>
+<span class="text-base font-bold g-t">SocialFlow</span>
+</div>
+<p class="text-slate-500 text-sm">Gestão inteligente de redes sociais para quem quer crescer.</p>
+</div>
+<div>
+<h4 class="font-semibold mb-2.5 text-sm text-slate-300">Produto</h4>
+<ul class="space-y-1.5 text-sm text-slate-500">
+<li><a href="#recursos" class="hover:text-slate-300">Recursos</a></li>
+<li><a href="#precos" class="hover:text-slate-300">Preços</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-semibold mb-2.5 text-sm text-slate-300">Legal</h4>
+<ul class="space-y-1.5 text-sm text-slate-500">
+<li><a href="#" class="hover:text-slate-300">Privacidade</a></li>
+<li><a href="#" class="hover:text-slate-300">Termos</a></li>
+</ul>
+</div>
+</div>
+<div class="mt-8 pt-6 border-t border-white/5 text-center text-xs text-slate-600">
+© 2025 SocialFlow. Todos os direitos reservados.
+</div>
+</div>
+</footer>
+</div>
+
+<!-- ══════════════ AUTH MODAL ══════════════ -->
+<div id="auth-modal" class="fixed inset-0 z-[100] hidden">
+<div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="hideAuth()"></div>
+<div class="relative z-10 flex items-center justify-center min-h-screen p-3">
+<div class="gl rounded-2xl w-full max-w-sm mov overflow-hidden">
+<div class="p-6">
+<div class="text-center mb-5">
+<div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl mx-auto mb-2">⚡</div>
+<h2 class="text-xl font-bold" id="auth-t">Bem-vindo</h2>
+<p class="text-slate-400 text-xs mt-1" id="auth-s">Faça login para continuar</p>
+</div>
+<div class="flex gap-1.5 p-1 rounded-xl bg-white/5 mb-5">
+<button id="tl" onclick="setAuthTab('login')" class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all bg-indigo-500/20 text-indigo-300">Entrar</button>
+<button id="tr" onclick="setAuthTab('register')" class="flex-1 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400">Criar Conta</button>
+</div>
+<div id="auth-err" class="hidden mb-3 p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs"></div>
+<form id="f-login" onsubmit="doLogin(event)">
+<div class="space-y-3">
+<input type="email" required placeholder="E-mail" class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm">
+<input type="password" required placeholder="Senha" minlength="6" class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm">
+<button class="btn w-full py-2.5 rounded-xl font-semibold text-white text-sm">Entrar</button>
+</div>
+</form>
+<form id="f-register" class="hidden" onsubmit="doRegister(event)">
+<div class="space-y-3">
+<input type="text" required placeholder="Nome completo" class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm">
+<input type="email" required placeholder="E-mail" class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm">
+<input type="password" required placeholder="Senha (mín. 6 caracteres)" minlength="6" class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm">
+<button class="btn w-full py-2.5 rounded-xl font-semibold text-white text-sm">Criar Conta</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ══════════════ DASHBOARD ══════════════ -->
+<div id="dash" class="hidden min-h-screen">
+
+<button class="lg:hidden fixed top-3 left-3 z-[60] p-2 rounded-xl gl" onclick="toggleSB()">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+</button>
+<div id="sb-ov" class="fixed inset-0 bg-black/50 z-[45] hidden lg:hidden" onclick="toggleSB()"></div>
+
+<div class="flex">
+<aside id="sb" class="fixed lg:sticky top-0 left-0 z-[50] w-60 h-screen gl flex flex-col transition-transform duration-300 -translate-x-full lg:translate-x-0" style="border-right:1px solid rgba(255,255,255,.05)">
+
+<div class="p-4 border-b border-white/5">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">⚡</div>
+<div><div class="font-bold text-base g-t">SocialFlow</div><div class="text-[9px] text-slate-500 uppercase tracking-wider">Dashboard</div></div>
+</div>
+</div>
+
+<nav class="flex-1 p-3 space-y-0.5 overflow-y-auto">
+<div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-2.5 mb-1.5">Menu</div>
+<a class="slink on" data-v="cal" onclick="go('cal')"><span>📅</span> Calendário</a>
+<a class="slink" data-v="posts" onclick="go('posts')"><span>📝</span> Posts</a>
+<a class="slink" data-v="stats" onclick="go('stats')"><span>📊</span> Analytics</a>
+<a class="slink" data-v="accts" onclick="go('accts')"><span>📱</span> Contas</a>
+<div class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider px-2.5 mt-4 mb-1.5">Config</div>
+<a class="slink" data-v="cfg" onclick="go('cfg')"><span>⚙️</span> Configurações</a>
+</nav>
+
+<div class="p-3 border-t border-white/5">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xs" id="u-av">U</div>
+<div class="flex-1 min-w-0"><div class="text-xs font-medium truncate" id="u-nm">Usuário</div><div class="text-[10px] text-slate-500 truncate" id="u-em">email</div></div>
+<button onclick="doLogout()" class="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+</button>
+</div>
+</div>
+</aside>
+
+<main class="flex-1 min-h-screen pb-20 lg:pb-0">
+
+<!-- CALENDAR -->
+<section id="v-cal" class="view p-4 sm:p-6 lg:p-8">
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+<div><h1 class="text-xl sm:text-2xl font-bold">Calendário</h1><p class="text-slate-400 text-xs sm:text-sm mt-0.5">Gerencie seu conteúdo agendado</p></div>
+<button onclick="openPost()" class="btn px-4 py-2 rounded-xl text-sm font-semibold text-white flex items-center gap-1.5 self-start">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Novo Post</button>
+</div>
+<div class="gl rounded-2xl overflow-hidden">
+<div class="flex items-center justify-between px-4 py-3 border-b border-white/5">
+<button onclick="navCal(-1)" class="p-1.5 rounded-lg hover:bg-white/5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+<h2 class="text-base font-semibold" id="cal-title"></h2>
+<button onclick="navCal(1)" class="p-1.5 rounded-lg hover:bg-white/5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
+</div>
+<div class="p-3">
+<div class="grid grid-cols-7 gap-0.5 mb-1">
+<div class="text-center text-[10px] text-slate-500 py-1.5 font-medium">Dom</div><div class="text-center text-[10px] text-slate-500 py-1.5 font-medium">Seg</div><div class="text-center text-[10px] text-slate-500 py-1.5 font-medium">Ter</div><div class="text-center text-[10px] text-slate-500 py-1.5 font-medium">Qua</div><div class="text-center text-[10px] text-slate-500 py-1.5 font-medium">Qui</div><div class="text-center text-[10px] text-slate-500 py-1.5 font-medium">Sex</div><div class="text-center text-[10px] text-slate-500 py-1.5 font-medium">Sáb</div>
+</div>
+<div id="cal-grid" class="grid grid-cols-7 gap-0.5"></div>
+</div>
+</div>
+<div class="mt-6">
+<h2 class="text-base font-semibold mb-3">Próximos Posts</h2>
+<div id="up-posts" class="space-y-2"></div>
+</div>
+</section>
+
+<!-- POSTS -->
+<section id="v-posts" class="view hidden p-4 sm:p-6 lg:p-8">
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+<div><h1 class="text-xl sm:text-2xl font-bold">Posts</h1><p class="text-slate-400 text-xs sm:text-sm mt-0.5">Gerencie seu conteúdo</p></div>
+<button onclick="openPost()" class="btn px-4 py-2 rounded-xl text-sm font-semibold text-white flex items-center gap-1.5 self-start">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Novo Post</button>
+</div>
+<input id="p-search" oninput="searchPosts(this.value)" placeholder="🔍 Buscar posts..." class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm mb-4">
+<div class="flex gap-1.5 mb-4 flex-wrap">
+<button class="nav-p on" onclick="filterP('all',this)">Todos</button>
+<button class="nav-p text-slate-400" onclick="filterP('scheduled',this)">Agendados</button>
+<button class="nav-p text-slate-400" onclick="filterP('published',this)">Publicados</button>
+<button class="nav-p text-slate-400" onclick="filterP('draft',this)">Rascunhos</button>
+</div>
+<div id="posts-list" class="space-y-2"></div>
+</section>
+
+<!-- ANALYTICS -->
+<section id="v-stats" class="view hidden p-4 sm:p-6 lg:p-8">
+<div class="mb-6"><h1 class="text-xl sm:text-2xl font-bold">Analytics</h1><p class="text-slate-400 text-xs sm:text-sm mt-0.5">Acompanhe seu desempenho</p></div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+<div class="stat gl rounded-2xl p-4"><div class="text-[10px] text-slate-400 uppercase font-medium">Total Posts</div><div class="text-2xl font-bold text-white mt-1" id="s-total">0</div></div>
+<div class="stat gl rounded-2xl p-4"><div class="text-[10px] text-slate-400 uppercase font-medium">Agendados</div><div class="text-2xl font-bold text-indigo-300 mt-1" id="s-sched">0</div></div>
+<div class="stat gl rounded-2xl p-4"><div class="text-[10px] text-slate-400 uppercase font-medium">Publicados</div><div class="text-2xl font-bold text-emerald-300 mt-1" id="s-pub">0</div></div>
+<div class="stat gl rounded-2xl p-4"><div class="text-[10px] text-slate-400 uppercase font-medium">Rascunhos</div><div class="text-2xl font-bold text-slate-300 mt-1" id="s-draft">0</div></div>
+</div>
+<div class="grid lg:grid-cols-2 gap-4">
+<div class="gl rounded-2xl p-4"><h3 class="text-sm font-semibold mb-3">Posts por Plataforma</h3><canvas id="ch-plat" height="200"></canvas></div>
+<div class="gl rounded-2xl p-4"><h3 class="text-sm font-semibold mb-3">Posts por Status</h3><canvas id="ch-status" height="200"></canvas></div>
+</div>
+<div class="mt-4"><div class="gl rounded-2xl p-4"><h3 class="text-sm font-semibold mb-3">Atividade Semanal</h3><canvas id="ch-week" height="100"></canvas></div></div>
+</section>
+
+<!-- ACCOUNTS -->
+<section id="v-accts" class="view hidden p-4 sm:p-6 lg:p-8">
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+<div><h1 class="text-xl sm:text-2xl font-bold">Contas Sociais</h1><p class="text-slate-400 text-xs sm:text-sm mt-0.5">Gerencie suas conexões</p></div>
+<button onclick="openModal('conn-modal')" class="btn px-4 py-2 rounded-xl text-sm font-semibold text-white flex items-center gap-1.5 self-start">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Conectar</button>
+</div>
+<div id="acc-list" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+<h2 class="text-base font-semibold mt-8 mb-3">Disponíveis</h2>
+<div id="acc-avail" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2"></div>
+</section>
+
+<!-- SETTINGS -->
+<section id="v-cfg" class="view hidden p-4 sm:p-6 lg:p-8">
+<div class="mb-6"><h1 class="text-xl sm:text-2xl font-bold">Configurações</h1><p class="text-slate-400 text-xs sm:text-sm mt-0.5">Personalize sua experiência</p></div>
+<div class="max-w-xl space-y-4">
+<div class="gl rounded-2xl p-5">
+<h3 class="text-base font-semibold mb-3">Perfil</h3>
+<div class="space-y-3">
+<div><label class="block text-xs font-medium text-slate-300 mb-1">Nome</label><input id="cfg-nm" class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm"></div>
+<div><label class="block text-xs font-medium text-slate-300 mb-1">E-mail</label><input id="cfg-em" disabled class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-500 text-sm"></div>
+<button onclick="saveProfile()" class="btn px-5 py-2 rounded-xl text-sm font-semibold text-white">Salvar</button>
+</div>
+</div>
+<div class="gl rounded-2xl p-5">
+<h3 class="text-base font-semibold mb-3">Plano Atual</h3>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-lg">⭐</div>
+<div><div class="font-semibold" id="plan-name">Gratuito</div><div class="text-xs text-slate-400" id="plan-desc">3 contas · 10 posts/mês</div></div>
+</div>
+<button onclick="go('precos')" class="mt-3 px-5 py-2 rounded-xl gl hover:bg-white/[.08] text-sm font-semibold text-slate-200">Fazer Upgrade</button>
+</div>
+<div class="gl rounded-2xl p-5 border border-red-500/20">
+<h3 class="text-base font-semibold mb-2 text-red-400">Zona de Perigo</h3>
+<p class="text-xs text-slate-400 mb-3">Exclua sua conta permanentemente.</p>
+<button onclick="if(confirm('Excluir conta?')){doLogout();toast('Conta excluída','info')}" class="px-5 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/20">Excluir Conta</button>
+</div>
+</div>
+</section>
+
+</main>
+</div>
+
+<!-- Quick Actions Bar (mobile) -->
+<div class="quick fixed bottom-0 left-0 right-0 z-40 gl" style="border-top:1px solid rgba(255,255,255,.05)">
+<div class="flex items-center justify-around py-2 px-1">
+<button onclick="go('cal')" class="flex flex-col items-center gap-0.5 p-1.5"><span class="text-lg">📅</span><span class="text-[9px] text-slate-400">Calendário</span></button>
+<button onclick="openPost()" class="flex flex-col items-center gap-0.5"><div class="w-10 h-10 rounded-full btn flex items-center justify-center text-white text-lg">+</div></button>
+<button onclick="go('stats')" class="flex flex-col items-center gap-0.5 p-1.5"><span class="text-lg">📊</span><span class="text-[9px] text-slate-400">Analytics</span></button>
+<button onclick="go('accts')" class="flex flex-col items-center gap-0.5 p-1.5"><span class="text-lg">📱</span><span class="text-[9px] text-slate-400">Contas</span></button>
+</div>
+</div>
+</div>
+
+<!-- ══════════════ POST MODAL ══════════════ -->
+<div id="post-modal" class="fixed inset-0 z-[100] hidden">
+<div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeModal('post-modal')"></div>
+<div class="relative z-10 flex items-center justify-center min-h-screen p-3">
+<div class="gl rounded-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto mov">
+<div class="p-5 sm:p-6">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-lg font-bold" id="pm-title">Novo Post</h2>
+<button onclick="closeModal('post-modal')" class="p-1.5 rounded-lg hover:bg-white/5">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+</div>
+<form onsubmit="savePost(event)" id="post-form">
+<div class="mb-4">
+<div class="flex items-center justify-between mb-1">
+<label class="text-xs font-medium text-slate-300">Conteúdo</label>
+<button type="button" onclick="genAI()" id="ai-btn" class="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300">✨ Gerar com IA</button>
+</div>
+<textarea id="p-content" required rows="4" placeholder="O que você quer compartilhar?" class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm resize-none"></textarea>
+<div class="flex justify-between mt-1"><span class="text-[10px] text-slate-500">💡 Use a IA para criar conteúdo incrível</span><span class="text-[10px] text-slate-500"><span id="c-count">0</span> caracteres</span></div>
+</div>
+<div id="ai-box" class="hidden mb-4 p-3 rounded-xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+<div class="flex items-start gap-2">
+<span class="text-lg">🤖</span>
+<div class="flex-1">
+<div class="text-[10px] font-semibold text-indigo-300 mb-1">Sugestão da IA</div>
+<div class="text-xs text-slate-300" id="ai-text"></div>
+<div class="flex gap-1.5 mt-2">
+<button type="button" onclick="useAI()" class="px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 text-[11px] font-semibold hover:bg-indigo-500/30">Usar</button>
+<button type="button" onclick="genAI()" class="px-2.5 py-1 rounded-lg text-slate-400 text-[11px] hover:text-white">Outra</button>
+</div>
+</div>
+</div>
+</div>
+<div class="mb-4">
+<label class="block text-xs font-medium text-slate-300 mb-1.5">Plataformas</label>
+<div class="flex flex-wrap gap-1.5">
+<label class="cursor-pointer"><input type="checkbox" name="plat" value="instagram" class="hidden peer"><span class="pbadge gl hover:bg-pink-500/20 peer-checked:bg-pink-500/30 peer-checked:border-pink-500/40 transition-all border border-transparent" style="display:inline-flex">📷 Instagram</span></label>
+<label class="cursor-pointer"><input type="checkbox" name="plat" value="facebook" class="hidden peer"><span class="pbadge gl hover:bg-blue-500/20 peer-checked:bg-blue-500/30 peer-checked:border-blue-500/40 transition-all border border-transparent" style="display:inline-flex">📘 Facebook</span></label>
+<label class="cursor-pointer"><input type="checkbox" name="plat" value="linkedin" class="hidden peer"><span class="pbadge gl hover:bg-cyan-500/20 peer-checked:bg-cyan-500/30 peer-checked:border-cyan-500/40 transition-all border border-transparent" style="display:inline-flex">💼 LinkedIn</span></label>
+<label class="cursor-pointer"><input type="checkbox" name="plat" value="twitter" class="hidden peer"><span class="pbadge gl hover:bg-slate-500/20 peer-checked:bg-slate-500/30 peer-checked:border-slate-500/40 transition-all border border-transparent" style="display:inline-flex">🐦 X</span></label>
+<label class="cursor-pointer"><input type="checkbox" name="plat" value="tiktok" class="hidden peer"><span class="pbadge gl hover:bg-purple-500/20 peer-checked:bg-purple-500/30 peer-checked:border-purple-500/40 transition-all border border-transparent" style="display:inline-flex">🎵 TikTok</span></label>
+<label class="cursor-pointer"><input type="checkbox" name="plat" value="youtube" class="hidden peer"><span class="pbadge gl hover:bg-red-500/20 peer-checked:bg-red-500/30 peer-checked:border-red-500/40 transition-all border border-transparent" style="display:inline-flex">▶️ YouTube</span></label>
+</div>
+</div>
+<div class="mb-4">
+<label class="block text-xs font-medium text-slate-300 mb-1">URL da Imagem (opcional)</label>
+<input type="url" id="p-img" placeholder="https://..." class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm">
+</div>
+<div class="mb-5">
+<label class="block text-xs font-medium text-slate-300 mb-1">Data e Hora</label>
+<input type="datetime-local" id="p-date" required class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm">
+</div>
+<div class="flex gap-2">
+<button type="submit" class="btn flex-1 py-2.5 rounded-xl font-semibold text-white text-sm">📅 Agendar</button>
+<button type="button" onclick="closeModal('post-modal')" class="px-5 py-2.5 rounded-xl gl hover:bg-white/[.08] text-slate-300 text-sm font-semibold">Cancelar</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ══════════════ CONNECT MODAL ══════════════ -->
+<div id="conn-modal" class="fixed inset-0 z-[100] hidden">
+<div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeModal('conn-modal')"></div>
+<div class="relative z-10 flex items-center justify-center min-h-screen p-3">
+<div class="gl rounded-2xl w-full max-w-sm mov">
+<div class="p-6">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-lg font-bold">Conectar Conta</h2>
+<button onclick="closeModal('conn-modal')" class="p-1.5 rounded-lg hover:bg-white/5"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+</div>
+<form onsubmit="connectAcc(event)">
+<div class="space-y-3">
+<div><label class="block text-xs font-medium text-slate-300 mb-1">Plataforma</label>
+<select id="c-plat" class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm">
+<option value="instagram">📷 Instagram</option><option value="facebook">📘 Facebook</option><option value="linkedin">💼 LinkedIn</option><option value="twitter">🐦 X</option><option value="tiktok">🎵 TikTok</option><option value="youtube">▶️ YouTube</option><option value="pinterest">📌 Pinterest</option>
+</select></div>
+<div><label class="block text-xs font-medium text-slate-300 mb-1">Usuário</label>
+<input id="c-user" required placeholder="@seu_usuario" class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-sm"></div>
+<button class="btn w-full py-2.5 rounded-xl font-semibold text-white text-sm">Conectar</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// SUPABASE CONFIG
+// ⬇️ SUBSTITUA PELOS SEUS DADOS ⬇️
+// ══════════════════════════════════════
+const SB_URL = 'https://SEU-PROJETO.supabase.co';
+const SB_KEY = 'SUA_ANON_KEY_AQUI';
+const sb = (window.supabase?.createClient && !SB_URL.includes('SEU-PROJETO'))
+  ? window.supabase.createClient(SB_URL, SB_KEY) : null;
+const isDemo = !sb || SB_URL.includes('SEU-PROJETO');
+
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+let user = null, posts = [], accounts = [], calDate = new Date(), curFilter = 'all', editId = null, chartsDone = false;
+const MON = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const PL_COLORS = {instagram:'bg-pink-500/20 text-pink-300',facebook:'bg-blue-500/20 text-blue-300',linkedin:'bg-cyan-500/20 text-cyan-300',twitter:'bg-slate-500/20 text-slate-300',tiktok:'bg-purple-500/20 text-purple-300',youtube:'bg-red-500/20 text-red-300',pinterest:'bg-orange-500/20 text-orange-300'};
+const PL_EMOJI = {instagram:'📷',facebook:'📘',linkedin:'💼',twitter:'🐦',tiktok:'🎵',youtube:'▶️',pinterest:'📌'};
+const ST_STYLE = {scheduled:'bg-indigo-500/20 text-indigo-300',published:'bg-emerald-500/20 text-emerald-300',failed:'bg-red-500/20 text-red-300',draft:'bg-slate-500/20 text-slate-300',cancelled:'bg-yellow-500/20 text-yellow-300'};
+const ST_DOT = {scheduled:'#818cf8',published:'#34d399',failed:'#f87171',draft:'#94a3b8',cancelled:'#fbbf24'};
+const ST_LABEL = {scheduled:'⏰ Agendado',published:'✅ Publicado',failed:'❌ Falhou',draft:'📝 Rascunho',cancelled:'🚫 Cancelado'};
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async () => {
+  const cEl = document.getElementById('p-content');
+  if (cEl) cEl.addEventListener('input', () => document.getElementById('c-count').textContent = cEl.value.length);
+
+  const dEl = document.getElementById('p-date');
+  if (dEl) { const n = new Date(); n.setMinutes(n.getMinutes() + 30); dEl.value = n.toISOString().slice(0,16); }
+
+  if (sb) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session?.user) { user = session.user; await onAuth(); }
+    sb.auth.onAuthStateChange(async (e, s) => {
+      if (s?.user) { user = s.user; if (e === 'SIGNED_IN' || e === 'TOKEN_REFRESHED') await onAuth(); }
+      else { user = null; showLand(); }
+    });
+  }
+});
+
+async function onAuth() {
+  hideAuth(); showDash(); updUserUI(); await ensureProfile(); await loadPosts(); await loadAccounts(); renderCal(); updStats();
+}
+
+// ══════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════
+function showLand() { document.getElementById('landing').classList.remove('hidden'); document.getElementById('dash').classList.add('hidden'); window.scrollTo(0,0); }
+function showDash() { document.getElementById('landing').classList.add('hidden'); document.getElementById('dash').classList.remove('hidden'); go('cal'); }
+
+function go(v) {
+  document.querySelectorAll('.view').forEach(s => s.classList.add('hidden'));
+  const el = document.getElementById('v-'+v);
+  if (el) el.classList.remove('hidden');
+  document.querySelectorAll('.slink').forEach(l => l.classList.remove('on'));
+  const link = document.querySelector(`.slink[data-v="${v}"]`);
+  if (link) link.classList.add('on');
+  const sb = document.getElementById('sb');
+  if (window.innerWidth < 1024) { sb.classList.add('-translate-x-full'); document.getElementById('sb-ov').classList.add('hidden'); }
+  if (v === 'stats' && !chartsDone) { setTimeout(() => { drawCharts(); chartsDone = true; }, 150); }
+  if (v === 'cal') renderCal();
+  if (v === 'accts') renderAccounts();
+  if (v === 'cfg') loadSettings();
+}
+
+function toggleSB() { document.getElementById('sb').classList.toggle('-translate-x-full'); document.getElementById('sb-ov').classList.toggle('hidden'); }
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.body.style.overflow = ''; }
+
+// ══════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════
+function showAuth(tab) { openModal('auth-modal'); setAuthTab(tab); }
+function hideAuth() { closeModal('auth-modal'); }
+
+function setAuthTab(t) {
+  const lf = document.getElementById('f-login'), rf = document.getElementById('f-register');
+  const tl = document.getElementById('tl'), tr = document.getElementById('tr');
+  const title = document.getElementById('auth-t'), sub = document.getElementById('auth-s');
+  document.getElementById('auth-err').classList.add('hidden');
+  if (t === 'login') {
+    lf.classList.remove('hidden'); rf.classList.add('hidden');
+    tl.className = 'flex-1 py-2 rounded-lg text-sm font-semibold transition-all bg-indigo-500/20 text-indigo-300';
+    tr.className = 'flex-1 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400';
+    title.textContent = 'Bem-vindo de volta'; sub.textContent = 'Faça login para continuar';
+  } else {
+    lf.classList.add('hidden'); rf.classList.remove('hidden');
+    tr.className = 'flex-1 py-2 rounded-lg text-sm font-semibold transition-all bg-indigo-500/20 text-indigo-300';
+    tl.className = 'flex-1 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400';
+    title.textContent = 'Criar conta'; sub.textContent = 'Comece grátis em segundos';
+  }
+}
+
+function authErr(m) { const e = document.getElementById('auth-err'); e.textContent = m; e.classList.remove('hidden'); }
+
+async function doLogin(e) {
+  e.preventDefault();
+  const f = e.target, email = f.querySelector('input[type="email"]').value, pass = f.querySelector('input[type="password"]').value;
+  if (isDemo) { user = {id:'demo',email,user_metadata:{full_name:email.split('@')[0]}}; await onAuth(); toast('Login realizado!','success'); return; }
+  try { const { error } = await sb.auth.signInWithPassword({ email, password: pass }); if (error) throw error; toast('Login realizado!','success'); }
+  catch(err) { authErr(err.message); }
+}
+
+async function doRegister(e) {
+  e.preventDefault();
+  const f = e.target, inp = f.querySelectorAll('input'), name = inp[0].value, email = inp[1].value, pass = inp[2].value;
+  if (isDemo) { user = {id:'demo',email,user_metadata:{full_name:name}}; await onAuth(); toast('Conta criada!','success'); return; }
+  try {
+    const { error } = await sb.auth.signUp({ email, password: pass, options: { data: { full_name: name } } });
+    if (error) throw error;
+    toast('Conta criada! Verifique seu e-mail.','success');
+  } catch(err) { authErr(err.message); }
+}
+
+async function doLogout() {
+  if (sb && !isDemo) await sb.auth.signOut();
+  user = null; posts = []; accounts = []; chartsDone = false;
+  showLand(); toast('Deslogado','info');
+}
+
+function updUserUI() {
+  if (!user) return;
+  const nm = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário';
+  document.getElementById('u-nm').textContent = nm;
+  document.getElementById('u-em').textContent = user.email || '';
+  document.getElementById('u-av').textContent = nm.charAt(0).toUpperCase();
+}
+
+// ══════════════════════════════════════
+// PROFILE
+// ══════════════════════════════════════
+async function ensureProfile() {
+  if (!sb || !user || user.id === 'demo') return;
+  try {
+    const { data } = await sb.from('profiles').select('id').eq('id', user.id).single();
+    if (!data) await sb.from('profiles').insert({ id: user.id, email: user.email, full_name: user.user_metadata?.full_name || '' });
+  } catch(e) {}
+}
+
+function loadSettings() {
+  if (!user) return;
+  document.getElementById('cfg-nm').value = user.user_metadata?.full_name || '';
+  document.getElementById('cfg-em').value = user.email || '';
+}
+
+async function saveProfile() {
+  const nm = document.getElementById('cfg-nm').value;
+  if (sb && user?.id !== 'demo') {
+    await sb.from('profiles').update({ full_name: nm }).eq('id', user.id);
+    await sb.auth.updateUser({ data: { full_name: nm } });
+  }
+  if (user?.user_metadata) user.user_metadata.full_name = nm;
+  updUserUI(); toast('Perfil atualizado!','success');
+}
+
+// ══════════════════════════════════════
+// POSTS
+// ══════════════════════════════════════
+async function loadPosts() {
+  if (isDemo) {
+    const t = new Date();
+    posts = [
+      {id:'1',content:'🚀 Nosso novo produto chegou! Confira as novidades. #lançamento #inovação',platforms:['instagram','linkedin'],scheduled_at:new Date(t.getTime()+86400000).toISOString(),status:'scheduled'},
+      {id:'2',content:'💡 Dica: planeje seu conteúdo com 1 semana de antecedência. #marketing #dicas',platforms:['twitter','linkedin'],scheduled_at:new Date(t.getTime()+172800000).toISOString(),status:'scheduled'},
+      {id:'3',content:'🎯 Engajamento cresceu 40% este mês! #growth #resultados',platforms:['facebook','instagram'],scheduled_at:new Date(t.getTime()-86400000).toISOString(),status:'published'},
+      {id:'4',content:'✨ Bastidores do nosso time. #culture #equipe',platforms:['instagram','tiktok'],scheduled_at:new Date(t.getTime()+259200000).toISOString(),status:'draft'},
+    ];
+    renderUpcoming(); renderPostsList(); return;
+  }
+  try {
+    const { data, error } = await sb.from('posts').select('*').eq('user_id', user.id).order('scheduled_at', { ascending: true });
+    if (error) throw error;
+    posts = data || [];
+  } catch(e) { posts = []; }
+  renderUpcoming(); renderPostsList();
+}
+
+function renderUpcoming() {
+  const c = document.getElementById('up-posts');
+  const up = posts.filter(p => new Date(p.scheduled_at) >= new Date() && p.status === 'scheduled').slice(0, 5);
+  if (!up.length) { c.innerHTML = '<div class="gl rounded-xl p-6 text-center text-slate-500 text-xs">Nenhum post agendado. Crie seu primeiro post!</div>'; return; }
+  c.innerHTML = up.map(p => `
+    <div class="gl rounded-xl p10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-lg shrink-0">${(p.platforms||[]).map(pl=>PL_EMOJI[pl]||'📱').join(' ')}</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-xs text-slate-200 truncate">${esc(p.content).substring(0,60)}...</div>
+        <div class="flex items-center gap-1.5 mt-0.5"><span class="text-[10px] text-slate-500">📅 ${fmtD(p.scheduled_at)}</span><span class="pbadge ${ST_STYLE[p.status]||''}" style="font-size:.65rem">${p.status}-3 flex items-center gap-3">
+      <div class="w-</span></div>
+      </div>
+      <button onclick="delPost('${p.id}')" class="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 shrink-0">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      </button>
+    </div>`).join('');
+  renderPostsList();
+}
+
+function renderPostsList() {
+  const c = document.getElementById('posts-list');
+  const f = curFilter === 'all' ? posts : posts.filter(p => p.status === curFilter);
+  if (!f.length) { c.innerHTML = `<div class="gl rounded-xl p-8 text-center"><div class="text-3xl mb-2">📭</div><div class="text-slate-400 text-xs">Nenhum post.</div></div>`; return; }
+  c.innerHTML = f.sort((a,b)=>new Date(b.scheduled_at)-new Date(a.scheduled_at)).map(p => `
+    <div class="gl rounded-xl p-4">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-1.5 mb-1.5 flex-wrap">
+            ${(p.platforms||[]).map(pl=>`<span class="pbadge ${PL_COLORS[pl]||''}">${PL_EMOJI[pl]||'📱'} ${pl}</span>`).join('')}
+            <span class="pbadge ${ST_STYLE[p.status]||''}">${ST_LABEL[p.status]||p.status}</span>
+          </div>
+          <div class="text-sm text-slate-200 leading-relaxed">${esc(p.content)}</div>
+          ${p.image_url ? `<div class="mt-2 rounded-lg overflow-hidden max-w-[200px]"><img src="${esc(p.image_url)}" class="w-full h-24 object-cover" onerror="this.parentNode.style.display='none'"></div>` : ''}
+          <div class="text-[10px] text-slate-500 mt-2">📅 ${fmtD(p.scheduled_at)}</div>
+        </div>
+        <div class="flex flex-col gap-1">
+          <button onclick="editPost('${p.id}')" class="p-1.5 rounded-lg hover:bg-indigo-500/10 text-slate-500 hover:text-indigo-400" title="Editar"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+          <button onclick="dupPost('${p.id}')" class="p-1.5 rounded-lg hover:bg-purple-500/10 text-slate-500 hover:text-purple-400" title="Duplicar"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>
+          <button onclick="delPost('${p.id}')" class="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400" title="Excluir"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function filterP(f, btn) {
+  curFilter = f;
+  document.querySelectorAll('[onclick^="filterP"]').forEach(b => { b.classList.remove('on'); b.classList.add('text-slate-400'); });
+  btn.classList.add('on'); btn.classList.remove('text-slate-400');
+  renderPostsList();
+}
+
+function searchPosts(q) {
+  const ql = q.toLowerCase();
+  const c = document.getElementById('posts-list');
+  const f = posts.filter(p => p.content.toLowerCase().includes(ql) || (p.platforms||[]).some(pl=>pl.includes(ql)));
+  if (!f.length) { c.innerHTML = `<div class="gl rounded-xl p-8 text-center"><div class="text-3xl mb-2">🔍</div><div class="text-slate-400 text-xs">Sem resultados.</div></div>`; return; }
+  // reuse render
+  const saved = curFilter;
+  curFilter = 'all';
+  const origPosts = posts;
+  posts = f;
+  renderPostsList();
+  posts = origPosts;
+  curFilter = saved;
+}
+
+function openPost() {
+  editId = null;
+  document.getElementById('pm-title').textContent = 'Novo Post';
+  document.getElementById('post-form').reset();
+  document.getElementById('c-count').textContent = '0';
+  document.getElementById('ai-box').classList.add('hidden');
+  const dEl = document.getElementById('p-date');
+  const n = new Date(); n.setMinutes(n.getMinutes() + 30); dEl.value = n.toISOString().slice(0,16);
+  openModal('post-modal');
+}
+
+function editPost(id) {
+  const p = posts.find(x => x.id === id); if (!p) return;
+  editId = id;
+  document.getElementById('pm-title').textContent = 'Editar Post';
+  document.getElementById('p-content').value = p.content;
+  document.getElementById('p-img').value = p.image_url || '';
+  document.getElementById('c-count').textContent = p.content.length;
+  const d = new Date(p.scheduled_at);
+  document.getElementById('p-date').value = d.toISOString().slice(0,16);
+  document.querySelectorAll('input[name="plat"]').forEach(cb => cb.checked = (p.platforms||[]).includes(cb.value));
+  openModal('post-modal');
+}
+
+async function savePost(e) {
+  e.preventDefault();
+  const content = document.getElementById('p-content').value;
+  const img = document.getElementById('p-img').value || null;
+  const date = document.getElementById('p-date').value;
+  const plats = Array.from(document.querySelectorAll('input[name="plat"]:checked')).map(c => c.value);
+  if (!plats.length) { toast('Selecione ao menos 1 plataforma!','error'); return; }
+
+  const data = { content, image_url: img, platforms: plats, scheduled_at: new Date(date).toISOString() };
+
+  if (sb && user?.id !== 'demo') {
+    try {
+      if (editId) {
+        const { error } = await sb.from('posts').update(data).eq('id', editId);
+        if (error) throw error;
+        const idx = posts.findIndex(p => p.id === editId);
+        if (idx !== -1) posts[idx] = { ...posts[idx], ...data };
+      } else {
+        const { data: row, error } = await sb.from('posts').insert({ ...data, user_id: user.id, status: 'scheduled' }).select().single();
+        if (error) throw error;
+        posts.push(row);
+      }
+    } catch(err) { toast('Erro: ' + err.message, 'error'); return; }
+  } else {
+    if (editId) {
+      const idx = posts.findIndex(p => p.id === editId);
+      if (idx !== -1) posts[idx] = { ...posts[idx], ...data };
+    } else {
+      posts.push({ id: Date.now().toString(), ...data, status: 'scheduled' });
+    }
+  }
+
+  editId = null;
+  closeModal('post-modal');
+  toast(editId ? 'Post atualizado!' : 'Post agendado! 🎉', 'success');
+  renderCal(); renderUpcoming(); renderPostsList(); updStats();
+}
+
+async function delPost(id) {
+  if (!confirm('Excluir este post?')) return;
+  if (sb && user?.id !== 'demo') await sb.from('posts').delete().eq('id', id);
+  posts = posts.filter(p => p.id !== id);
+  renderCal(); renderUpcoming(); renderPostsList(); updStats(); toast('Post excluído','info');
+}
+
+async function dupPost(id) {
+  const p = posts.find(x => x.id === id); if (!p) return;
+  const np = { content: p.content, image_url: p.image_url, platforms: [...(p.platforms||[])], scheduled_at: new Date(Date.now()+86400000).toISOString(), status: 'draft', user_id: user?.id };
+  if (sb && user?.id !== 'demo') {
+    const { data } = await sb.from('posts').insert(np).select().single();
+    if (data) posts.push(data);
+  } else posts.push({ id: Date.now().toString(), ...np });
+  renderCal(); renderUpcoming(); renderPostsList(); updStats(); toast('Duplicado como rascunho!','success');
+}
+
+// ══════════════════════════════════════
+// CALENDAR
+// ══════════════════════════════════════
+function renderCal() {
+  const y = calDate.getFullYear(), m = calDate.getMonth(), today = new Date();
+  document.getElementById('cal-title').textContent = `${MON[m]} ${y}`;
+  const first = new Date(y, m, 1), last = new Date(y, m+1, 0);
+  const days = last.getDate(), startDay = first.getDay();
+  let html = '';
+  for (let i = 0; i < startDay; i++) html += '<div class="cal-d bg-white/[.02]"></div>';
+  for (let d = 1; d <= days; d++) {
+    const dp = posts.filter(p => { const pd = new Date(p.scheduled_at); return pd.getFullYear()===y && pd.getMonth()===m && pd.getDate()===d; });
+    const isT = today.getFullYear()===y && today.getMonth()===m && today.getDate()===d;
+    const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    html += `<div class="cal-d ${isT?'bg-indigo-500/20 ring-1 ring-indigo-500/50':''}" onclick="openPostOn('${ds}')">
+      <div class="text-xs font-medium ${isT?'text-indigo-300':'text-slate-300'}">${d}</div>
+      <div class="flex gap-[2px] mt-[2px]">${dp.slice(0,4).map(p=>`<div class="dot" style="background:${ST_DOT[p.status]||'#818cf8'}"></div>`).join('')}${dp.length>4?`<div class="text-[8px] text-slate-500">+${dp.length-4}</div>`:''}</div>
+    </div>`;
+  }
+  document.getElementById('cal-grid').innerHTML = html;
+}
+
+function navCal(dir) { calDate.setMonth(calDate.getMonth()+dir); renderCal(); }
+function openPostOn(ds) { openPost(); document.getElementById('p-date').value = ds + 'T12:00'; }
+
+// ══════════════════════════════════════
+// AI
+// ══════════════════════════════════════
+async function genAI() {
+  const btn = document.getElementById('ai-btn');
+  btn.disabled = true; btn.textContent = '⏳ Gerando...';
+  const topic = document.getElementById('p-content').value.trim() || 'marketing digital e crescimento de negócio';
+
+  try {
+    if (sb && !isDemo) {
+      const { data } = await sb.functions.invoke('ai-caption', {
+        body: { prompt: topic, type: 'caption', platform: 'instagram', tone: 'profissional' }
+      });
+      if (data?.text) {
+        document.getElementById('ai-text').textContent = data.text;
+        document.getElementById('ai-box').classList.remove('hidden');
+        return;
+      }
+    }
+  } catch(e) {}
+
+  // Fallback local
+  const tpls = [
+    `🚀 ${topic} | Descubra como isso transforma seus resultados! #inovação #sucesso #marketing\n\n#marketingdigital #socialmedia #estrategia`,
+    `✨ ${topic} 💡 A chave para o próximo nível está aqui! #crescimento #estratégia\n\n#empreendedorismo #inovação #produtividade`,
+    `🔥 ${topic} — quando criatividade encontra estratégia, resultados são extraordinários!\n\n#digital #resultados #inspire #foco #equipe`,
+    `💪 ${topic} | Não deixe essa oportunidade passar!\n\n#oportunidade #negócios #futuro #crescimento #marketing`,
+    `🎯 ${topic} | Foco, dedicação e resultados.\n\n#foco #resultados #motivação #sucesso #jornada`,
+    `💎 ${topic} | Qualidade e inovação em cada detalhe.\n\n#qualidade #inovação #excelência #marketingdigital`,
+    `📌 ${topic} | Salve e compartilhe!\n\n#salve #compartilhe #viral #trending #socialmedia`,
+    `🌟 ${topic} | Cada passo conta na jornada do sucesso!\n\n#jornada #motivação #crescimento #aprendizado #dicas`,
+  ];
+  document.getElementById('ai-text').textContent = tpls[Math.floor(Math.random() * tpls.length)];
+  document.getElementById('ai-box').classList.remove('hidden');
+  btn.disabled = false; btn.innerHTML = '✨ Gerar com IA';
+}
+
+function useAI() {
+  const t = document.getElementById('ai-text').textContent;
+  document.getElementById('p-content').value = t;
+  document.getElementById('c-count').textContent = t.length;
+  document.getElementById('ai-box').classList.add('hidden');
+  toast('Legenda aplicada!','success');
+}
+
+// ══════════════════════════════════════
+// ACCOUNTS
+// ══════════════════════════════════════
+async function loadAccounts() {
+  if (isDemo) {
+    accounts = [
+      {id:'1',platform:'instagram',username:'@minha_marca',connected:true},
+      {id:'2',platform:'linkedin',username:'Minha Empresa',connected:true},
+    ];
+    return;
+  }
+  try { const { data } = await sb.from('social_accounts').select('*').eq('user_id', user.id); accounts = data || []; } catch(e) { accounts = []; }
+}
+
+function renderAccounts() {
+  const c = document.getElementById('acc-list'), avail = document.getElementById('acc-avail');
+  if (!accounts.length) {
+    c.innerHTML = `<div class="gl rounded-xl p-6 text-center col-span-full"><div class="text-3xl mb-2">📱</div><div class="text-slate-400 text-xs">Nenhuma conta conectada.</div></div>`;
+  } else {
+    c.innerHTML = accounts.map(a => `
+      <div class="gl rounded-2xl p-4">
+        <div class="flex items-center gap-2.5 mb-3">
+          <div class="w-10 h-10 rounded-xl ${PL_COLORS[a.platform]||''} flex items-center justify-center text-xl">${PL_EMOJI[a.platform]||'📱'}</div>
+          <div><div class="font-semibold text-sm capitalize">${a.platform}</div><div class="text-xs text-slate-400">${esc(a.username)}</div></div>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="flex items-center gap-1 text-[10px] text-emerald-400"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Conectado</span>
+          <button onclick="disconnectAcc('${a.id}')" class="text-[10px] text-red-400 hover:text-red-300">Desconectar</button>
+        </div>
+      </div>`).join('');
+  }
+  const all = ['instagram','facebook','linkedin','twitter','tiktok','youtube','pinterest'];
+  const conn = accounts.map(a=>a.platform);
+  avail.innerHTML = all.filter(p=>!conn.includes(p)).map(p=>`
+    <div class="gl rounded-xl p-3 text-center cursor-pointer hover:bg-white/[.05] transition-all" onclick="document.getElementById('c-plat').value='${p}';openModal('conn-modal')">
+      <div class="text-xl mb-1">${PL_EMOJI[p]||'📱'}</div>
+      <div class="text-xs font-medium capitalize">${p}</div>
+      <div class="text-[10px] text-slate-500 mt-0.5">+ Conectar</div>
+    </div>`).join('');
+}
+
+async function connectAcc(e) {
+  e.preventDefault();
+  const platform = document.getElementById('c-plat').value, username = document.getElementById('c-user').value;
+  const acc = { user_id: user?.id, platform, username, connected: true };
+  if (sb && user?.id !== 'demo') {
+    try { const { data, error } = await sb.from('social_accounts').insert(acc).select().single(); if (error) throw error; accounts.push(data); }
+    catch(err) { toast('Erro: ' + err.message, 'error'); return; }
+  } else accounts.push({ id: Date.now().toString(), ...acc });
+  closeModal('conn-modal');
+  document.getElementById('c-user').value = '';
+  toast(`${PL_EMOJI[platform]} ${platform} conectado!`,'success');
+  renderAccounts();
+}
+
+async function disconnectAcc(id) {
+  if (!confirm('Desconectar?')) return;
+  if (sb && user?.id !== 'demo') await sb.from('social_accounts').delete().eq('id', id);
+  accounts = accounts.filter(a=>a.id!==id);
+  renderAccounts(); toast('Desconectado','info');
+}
+
+// ══════════════════════════════════════
+// STATS & CHARTS
+// ══════════════════════════════════════
+function updStats() {
+  document.getElementById('s-total').textContent = posts.length;
+  document.getElementById('s-sched').textContent = posts.filter(p=>p.status==='scheduled').length;
+  document.getElementById('s-pub').textContent = posts.filter(p=>p.status==='published').length;
+  document.getElementById('s-draft').textContent = posts.filter(p=>p.status==='draft').length;
+}
+
+function drawCharts() {
+  // Destroy existing
+  ['ch-plat','ch-status','ch-week'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el?.chart) el.chart.destroy();
+  });
+
+  // Platform chart
+  const platCounts = {};
+  posts.forEach(p => (p.platforms||[]).forEach(pl => platCounts[pl] = (platCounts[pl]||0)+1));
+  const platLabels = Object.keys(platCounts);
+  const platColors = platLabels.map(l => {
+    const m = {instagram:'#ec4899',facebook:'#3b82f6',linkedin:'#06b6d4',twitter:'#94a3b8',tiktok:'#a855f7',youtube:'#ef4444',pinterest:'#f97316'};
+    return m[l] || '#818cf8';
+  });
+  const platCtx = document.getElementById('ch-plat');
+  if (platCtx) {
+    platCtx.chart = new Chart(platCtx, {
+      type: 'doughnut',
+      data: {
+        labels: platLabels.map(l => PL_EMOJI[l] + ' ' + l.charAt(0).toUpperCase()+l.slice(1)),
+        datasets: [{ data: platLabels.map(l => platCounts[l]), backgroundColor: platColors, borderWidth: 0 }]
+      },
+      options: { responsive: true, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 10, font: { size: 11 } } } } }
+    });
+  }
+
+  // Status chart
+  const stCounts = {};
+  posts.forEach(p => stCounts[p.status] = (stCounts[p.status]||0)+1);
+  const stLabels = Object.keys(stCounts);
+  const stColors = stLabels.map(l => ({scheduled:'#818cf8',published:'#34d399',failed:'#f87171',draft:'#94a3b8',cancelled:'#fbbf24'}[l]||'#818cf8'));
+  const stCtx = document.getElementById('ch-status');
+  if (stCtx) {
+    stCtx.chart = new Chart(stCtx, {
+      type: 'bar',
+      data: {
+        labels: stLabels.map(l => ST_LABEL[l]||l),
+        datasets: [{ data: stLabels.map(l => stCounts[l]), backgroundColor: stColors.map(c => c + '99'), borderColor: stColors, borderWidth: 1, borderRadius: 8 }]
+      },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#64748b', font: { size: 10 } } }, y: { grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#64748b', font: { size: 10 } } } } }
+    });
+  }
+
+  // Week chart
+  const wkLabels = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const wkData = [0,0,0,0,0,0,0];
+  posts.forEach(p => {
+    const d = new Date(p.scheduled_at);
+    const day = d.getDay();
+    wkData[day === 0 ? 6 : day - 1]++;
+  });
+  const wkCtx = document.getElementById('ch-week');
+  if (wkCtx) {
+    wkCtx.chart = new Chart(wkCtx, {
+      type: 'line',
+      data: {
+        labels: wkLabels,
+        datasets: [{ data: wkData, borderColor: '#818cf8', backgroundColor: 'rgba(129,140,248,.1)', fill: true, tension: .4, pointRadius: 4, pointBackgroundColor: '#818cf8' }]
+      },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#64748b' } }, y: { grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#64748b', stepSize: 1 } } } }
+    });
+  }
+}
+
+// ══════════════════════════════════════
+// TOASTS
+// ══════════════════════════════════════
+function toast(msg, type='info') {
+  const c = document.getElementById('toasts');
+  const colors = { success:'bg-emerald-500', error:'bg-red-500', info:'bg-indigo-500', warning:'bg-yellow-500' };
+  const el = document.createElement('div');
+  el.className = `toast px-4 py-2.5 rounded-xl shadow-xl text-white font-medium text-xs ${colors[type]||colors.info}`;
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; el.style.transition='all .3s'; setTimeout(() => el.remove(), 300); }, 3000);
+}
+
+// ══════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function fmtD(iso) { if (!iso) return ''; return new Date(iso).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('[id$="-modal"]').forEach(m => { if (!m.classList.contains('hidden')) closeModal(m.id); });
+  if ((e.ctrlKey||e.metaKey) && e.key === 'n') { e.preventDefault(); openPost(); }
+});
+
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const t = document.querySelector(a.getAttribute('href'));
+    if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  });
+});
+</script>
+</body>
+</html>
