@@ -1,0 +1,20 @@
+name: Auto Publish Posts
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Auto Publish
+        run: |
+          echo "Verificando posts agendados..."
+          curl -X POST \
+            "${{ secrets.SUPABASE_URL }}/functions/v1/auto-publish" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -s -w "\nHTTP Status: %{http_code}\n"
+          echo "Concluido!"
